@@ -98,8 +98,10 @@ export default function PostEditor() {
         setSavedAt(new Date())
       }
 
-      // Trigger Cloudflare Pages deploy if publishing
-      if (publish) {
+      // Trigger rebuild when publishing OR unpublishing (was published, now draft)
+      const wasPublished = form.published
+      const isPublished = payload.published
+      if (isPublished || wasPublished) {
         await fetch('/.netlify/functions/deploy', { method: 'POST' }).catch(() => null)
       }
     } catch (err) {
