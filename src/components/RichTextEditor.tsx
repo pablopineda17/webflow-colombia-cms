@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { useEditor, EditorContent } from '@tiptap/react'
+import { useEditor, EditorContent, FloatingMenu } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Underline from '@tiptap/extension-underline'
 import Image from '@tiptap/extension-image'
@@ -7,7 +7,8 @@ import Link from '@tiptap/extension-link'
 import Placeholder from '@tiptap/extension-placeholder'
 import {
   Bold, Italic, Underline as UnderlineIcon, Heading1, Heading2, Heading3,
-  Quote, List, ListOrdered, ImageIcon, Code2, Undo, Redo,
+  Quote, List, ListOrdered, ImageIcon, Code2, Undo, Redo, Plus,
+  Heading4, Heading5, Heading6, Code, AlignLeft,
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { EmbedNode } from './extensions/EmbedNode'
@@ -18,9 +19,36 @@ interface RichTextEditorProps {
   onChange: (html: string) => void
 }
 
+const BLOCK_MENU_ITEMS = [
+  {
+    group: 'Text',
+    items: [
+      { label: 'Heading 1',     icon: Heading1,    action: (e: ReturnType<typeof useEditor>) => e?.chain().focus().toggleHeading({ level: 1 }).run() },
+      { label: 'Heading 2',     icon: Heading2,    action: (e: ReturnType<typeof useEditor>) => e?.chain().focus().toggleHeading({ level: 2 }).run() },
+      { label: 'Heading 3',     icon: Heading3,    action: (e: ReturnType<typeof useEditor>) => e?.chain().focus().toggleHeading({ level: 3 }).run() },
+      { label: 'Heading 4',     icon: Heading4,    action: (e: ReturnType<typeof useEditor>) => e?.chain().focus().toggleHeading({ level: 4 }).run() },
+      { label: 'Heading 5',     icon: Heading5,    action: (e: ReturnType<typeof useEditor>) => e?.chain().focus().toggleHeading({ level: 5 }).run() },
+      { label: 'Heading 6',     icon: Heading6,    action: (e: ReturnType<typeof useEditor>) => e?.chain().focus().toggleHeading({ level: 6 }).run() },
+      { label: 'Paragraph',     icon: AlignLeft,   action: (e: ReturnType<typeof useEditor>) => e?.chain().focus().setParagraph().run() },
+      { label: 'Blockquote',    icon: Quote,       action: (e: ReturnType<typeof useEditor>) => e?.chain().focus().toggleBlockquote().run() },
+      { label: 'Numbered list', icon: ListOrdered, action: (e: ReturnType<typeof useEditor>) => e?.chain().focus().toggleOrderedList().run() },
+      { label: 'Bulleted list', icon: List,        action: (e: ReturnType<typeof useEditor>) => e?.chain().focus().toggleBulletList().run() },
+      { label: 'Code block',    icon: Code,        action: (e: ReturnType<typeof useEditor>) => e?.chain().focus().toggleCodeBlock().run() },
+    ],
+  },
+  {
+    group: 'Media',
+    items: [
+      { label: 'Image',       icon: ImageIcon, action: (_e: ReturnType<typeof useEditor>, triggerImage?: () => void) => triggerImage?.() },
+      { label: 'HTML embed',  icon: Code2,     action: (_e: ReturnType<typeof useEditor>, _t?: () => void, openEmbed?: () => void) => openEmbed?.() },
+    ],
+  },
+]
+
 export default function RichTextEditor({ value, onChange }: RichTextEditorProps) {
   const [embedOpen, setEmbedOpen] = useState(false)
   const [imageUploading, setImageUploading] = useState(false)
+  const [blockMenuOpen, setBlockMenuOpen] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const isExternalUpdate = useRef(false)
 
@@ -30,7 +58,7 @@ export default function RichTextEditor({ value, onChange }: RichTextEditorProps)
       Underline,
       Image.configure({ HTMLAttributes: { class: 'max-w-full rounded-lg' } }),
       Link.configure({ openOnClick: false }),
-      Placeholder.configure({ placeholder: 'Write your blog post here…' }),
+      Placeholder.configure({ placeholder: 'Write your blog post here… or press + to insert a block' }),
       EmbedNode,
     ],
     content: value,
@@ -41,7 +69,6 @@ export default function RichTextEditor({ value, onChange }: RichTextEditorProps)
     },
   })
 
-  // Sync external value changes (e.g., when loading a saved post)
   useEffect(() => {
     if (editor && value !== editor.getHTML()) {
       isExternalUpdate.current = true
@@ -69,6 +96,9 @@ export default function RichTextEditor({ value, onChange }: RichTextEditorProps)
   const handleEmbedInsert = (html: string) => {
     editor?.chain().focus().insertContent({ type: 'embedBlock', attrs: { html } }).run()
   }
+
+  const triggerImage = () => fileInputRef.current?.click()
+  const openEmbed = () => { setEmbedOpen(true); setBlockMenuOpen(false) }
 
   if (!editor) return null
 
@@ -99,9 +129,9 @@ export default function RichTextEditor({ value, onChange }: RichTextEditorProps)
   const Divider = () => <div className="w-px h-5 bg-gray-200 mx-0.5" />
 
   return (
-    <div className="border border-gray-200 rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-transparent transition">
-      {/* Toolbar */}
-      <div className="flex flex-wrap items-center gap-0.5 px-2 py-1.5 border-b border-gray-100 bg-gray-50 sticky top-0 z-10">
+    <div className="border border-gray-200 rounded-xl overflow-visible focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-transparent transition">
+      {/* Top toolbar */}
+      <div className="flex flex-wrap items-center gap-0.5 px-2 py-1.5 border-b border-gray-100 bg-gray-50 sticky top-0 z-10 rounded-t-xl">
         <ToolbarButton onClick={() => editor.chain().focus().toggleBold().run()} active={editor.isActive('bold')} title="Bold">
           <Bold size={15} />
         </ToolbarButton>
@@ -139,7 +169,7 @@ export default function RichTextEditor({ value, onChange }: RichTextEditorProps)
         <Divider />
 
         <ToolbarButton
-          onClick={() => fileInputRef.current?.click()}
+          onClick={triggerImage}
           disabled={imageUploading}
           title="Insert image"
         >
@@ -161,6 +191,60 @@ export default function RichTextEditor({ value, onChange }: RichTextEditorProps)
           <Redo size={15} />
         </ToolbarButton>
       </div>
+
+      {/* Floating + block menu */}
+      <FloatingMenu
+        editor={editor}
+        tippyOptions={{ duration: 100, placement: 'left-start', offset: [0, 8] }}
+        className="flex items-center"
+      >
+        <div className="relative">
+          <button
+            type="button"
+            onMouseDown={(e) => { e.preventDefault(); setBlockMenuOpen(v => !v) }}
+            className="w-6 h-6 flex items-center justify-center rounded-md border border-gray-300 bg-white text-gray-400 hover:text-gray-700 hover:border-gray-400 transition-colors shadow-sm"
+          >
+            <Plus size={13} />
+          </button>
+
+          {blockMenuOpen && (
+            <>
+              {/* Backdrop to close */}
+              <div
+                className="fixed inset-0 z-40"
+                onMouseDown={() => setBlockMenuOpen(false)}
+              />
+              <div className="absolute left-8 top-0 z-50 w-52 bg-white border border-gray-200 rounded-xl shadow-lg py-1.5 overflow-hidden">
+                {BLOCK_MENU_ITEMS.map(group => (
+                  <div key={group.group}>
+                    <p className="px-3 pt-2 pb-1 text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                      {group.group}
+                    </p>
+                    {group.items.map(item => {
+                      const Icon = item.icon
+                      return (
+                        <button
+                          key={item.label}
+                          type="button"
+                          onMouseDown={(e) => {
+                            e.preventDefault()
+                            item.action(editor, triggerImage, openEmbed)
+                            setBlockMenuOpen(false)
+                          }}
+                          className="w-full flex items-center gap-2.5 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                        >
+                          <Icon size={15} className="text-gray-400 flex-shrink-0" />
+                          {item.label}
+                        </button>
+                      )
+                    })}
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+      </FloatingMenu>
 
       {/* Editor area */}
       <EditorContent
