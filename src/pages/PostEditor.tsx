@@ -143,7 +143,7 @@ export default function PostEditor() {
             )}
             <button
               type="button"
-              onClick={() => save()}
+              onClick={() => save(false)}
               disabled={saving || publishing}
               className="flex items-center gap-1.5 px-3.5 py-2 text-sm border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50 transition-colors"
             >
