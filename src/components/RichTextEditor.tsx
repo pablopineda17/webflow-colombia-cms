@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { useEditor, EditorContent, FloatingMenu } from '@tiptap/react'
+import { useEditor, EditorContent, FloatingMenu, BubbleMenu } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Underline from '@tiptap/extension-underline'
 import Image from '@tiptap/extension-image'
@@ -191,6 +191,55 @@ export default function RichTextEditor({ value, onChange }: RichTextEditorProps)
           <Redo size={15} />
         </ToolbarButton>
       </div>
+
+      {/* Bubble menu — appears on text selection */}
+      <BubbleMenu
+        editor={editor}
+        tippyOptions={{ duration: 100 }}
+        className="flex items-center gap-0.5 bg-gray-900 border border-gray-700 rounded-lg px-1.5 py-1 shadow-xl"
+      >
+        {[
+          { title: 'Bold',       icon: <Bold size={13} />,          active: editor.isActive('bold'),      action: () => editor.chain().focus().toggleBold().run() },
+          { title: 'Italic',     icon: <Italic size={13} />,        active: editor.isActive('italic'),    action: () => editor.chain().focus().toggleItalic().run() },
+          { title: 'Underline',  icon: <UnderlineIcon size={13} />, active: editor.isActive('underline'), action: () => editor.chain().focus().toggleUnderline().run() },
+          { title: 'Code',       icon: <Code size={13} />,          active: editor.isActive('code'),      action: () => editor.chain().focus().toggleCode().run() },
+        ].map(({ title, icon, active, action }) => (
+          <button
+            key={title}
+            type="button"
+            onMouseDown={(e) => { e.preventDefault(); action() }}
+            title={title}
+            className={`p-1.5 rounded transition-colors ${active ? 'bg-white text-gray-900' : 'text-gray-300 hover:bg-gray-700 hover:text-white'}`}
+          >
+            {icon}
+          </button>
+        ))}
+
+        <div className="w-px h-4 bg-gray-600 mx-0.5" />
+
+        {([1, 2, 3, 4, 5, 6] as const).map(level => (
+          <button
+            key={level}
+            type="button"
+            onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().toggleHeading({ level }).run() }}
+            title={`Heading ${level}`}
+            className={`px-1.5 py-1 rounded text-xs font-bold transition-colors ${editor.isActive('heading', { level }) ? 'bg-white text-gray-900' : 'text-gray-300 hover:bg-gray-700 hover:text-white'}`}
+          >
+            H{level}
+          </button>
+        ))}
+
+        <div className="w-px h-4 bg-gray-600 mx-0.5" />
+
+        <button
+          type="button"
+          onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().toggleBlockquote().run() }}
+          title="Blockquote"
+          className={`p-1.5 rounded transition-colors ${editor.isActive('blockquote') ? 'bg-white text-gray-900' : 'text-gray-300 hover:bg-gray-700 hover:text-white'}`}
+        >
+          <Quote size={13} />
+        </button>
+      </BubbleMenu>
 
       {/* Floating + block menu */}
       <FloatingMenu
